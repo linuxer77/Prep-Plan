@@ -45,7 +45,7 @@ export function ProblemFormDialog({
         }}
       >
         <label className="block space-y-2">
-          <span className="text-xs uppercase tracking-tight text-[#A3A3A3]">
+          <span className="font-display text-[9px] uppercase text-[#A3A3A3]">
             Problem Name
           </span>
           <Input
@@ -62,11 +62,11 @@ export function ProblemFormDialog({
 
         <div className="grid grid-cols-2 gap-4">
           <label className="block space-y-2">
-            <span className="text-xs uppercase tracking-tight text-[#A3A3A3]">
+            <span className="font-display text-[9px] uppercase text-[#A3A3A3]">
               Difficulty
             </span>
             <select
-              className="h-9 w-full border border-[#2A2A2A] bg-[#000000] px-3 text-sm text-[#FFFFFF] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#FFFFFF] focus-visible:ring-offset-1 focus-visible:ring-offset-[#000000]"
+              className="h-10 w-full border-2 border-[#2A2A2A] bg-[#000000] px-3 text-xl text-[#FFFFFF] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#FFFFFF] focus-visible:ring-offset-1 focus-visible:ring-offset-[#000000]"
               value={problemDraft.difficulty}
               onChange={(event) =>
                 setProblemDraft((currentDraft) => ({
@@ -84,7 +84,7 @@ export function ProblemFormDialog({
           </label>
 
           <label className="block space-y-2">
-            <span className="text-xs uppercase tracking-tight text-[#A3A3A3]">
+            <span className="font-display text-[9px] uppercase text-[#A3A3A3]">
               Estimated Time (min)
             </span>
             <Input

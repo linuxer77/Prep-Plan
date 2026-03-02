@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { CompleteProblemDialog } from "./components/complete-problem-dialog";
 import { PatternDetail } from "./components/pattern-detail";
@@ -11,44 +11,23 @@ import type {
   SolvedStatus,
 } from "./types/tracker";
 
-const initialPatternRecords: PatternRecord[] = [
-  {
-    id: crypto.randomUUID(),
-    name: "Sliding Window",
-    problems: [
-      {
-        id: crypto.randomUUID(),
-        name: "Longest Repeating Character Replacement",
-        difficulty: "Medium",
-        estimatedMinutes: 35,
-        isCompleted: false,
-      },
-      {
-        id: crypto.randomUUID(),
-        name: "Maximum Average Subarray I",
-        difficulty: "Easy",
-        estimatedMinutes: 15,
-        isCompleted: true,
-        solvedStatus: "Solved Independently",
-        timeTakenMinutes: 12,
-        completedAt: new Date().toLocaleDateString(),
-      },
-    ],
-  },
-  {
-    id: crypto.randomUUID(),
-    name: "Monotonic Stack",
-    problems: [
-      {
-        id: crypto.randomUUID(),
-        name: "Daily Temperatures",
-        difficulty: "Medium",
-        estimatedMinutes: 30,
-        isCompleted: false,
-      },
-    ],
-  },
-];
+const API_BASE_URL = "/api";
+
+interface ApiPattern {
+  id: string;
+  name: string;
+  desc: string;
+}
+
+interface ApiProblem {
+  id: string;
+  name: string;
+  desc: string;
+  is_done: boolean;
+  pattern: string;
+  note?: string;
+  url?: string;
+}
 
 const emptyProblemDraft: ProblemDraft = {
   name: "",
@@ -57,12 +36,8 @@ const emptyProblemDraft: ProblemDraft = {
 };
 
 function App() {
-  const [patternRecords, setPatternRecords] = useState<PatternRecord[]>(
-    initialPatternRecords,
-  );
-  const [activePatternId, setActivePatternId] = useState<string>(
-    initialPatternRecords[0]?.id ?? "",
-  );
+  const [patternRecords, setPatternRecords] = useState<PatternRecord[]>([]);
+  const [activePatternId, setActivePatternId] = useState<string>("");
   const [pendingPatternName, setPendingPatternName] = useState("");
 
   const [isProblemFormOpen, setIsProblemFormOpen] = useState(false);
@@ -75,6 +50,96 @@ function App() {
   const [completePromptProblemId, setCompletePromptProblemId] = useState<
     string | null
   >(null);
+
+  function toProblemRecord(problem: ApiProblem): ProblemRecord {
+    let difficulty: ProblemRecord["difficulty"] = "Easy";
+    let estimatedMinutes = 20;
+
+    if (problem.note) {
+      try {
+        const parsed = JSON.parse(problem.note) as {
+          difficulty?: ProblemRecord["difficulty"];
+          estimatedMinutes?: number;
+        };
+
+        if (
+          parsed.difficulty === "Easy" ||
+          parsed.difficulty === "Medium" ||
+          parsed.difficulty === "Hard"
+        ) {
+          difficulty = parsed.difficulty;
+        }
+
+        if (
+          typeof parsed.estimatedMinutes === "number" &&
+          Number.isFinite(parsed.estimatedMinutes)
+        ) {
+          estimatedMinutes = parsed.estimatedMinutes;
+        }
+      } catch {
+        // keep defaults when metadata is missing or malformed
+      }
+    }
+
+    return {
+      id: problem.id,
+      name: problem.name,
+      difficulty,
+      estimatedMinutes,
+      isCompleted: problem.is_done,
+    };
+  }
+
+  async function loadPatternRecords() {
+    try {
+      const patternsResponse = await fetch(`${API_BASE_URL}/pattern/list`);
+      if (!patternsResponse.ok) {
+        return;
+      }
+
+      const patterns = (await patternsResponse.json()) as ApiPattern[];
+
+      const patternsWithProblems = await Promise.all(
+        patterns.map(async (pattern): Promise<PatternRecord> => {
+          const problemsResponse = await fetch(
+            `${API_BASE_URL}/problem/${pattern.id}`,
+          );
+
+          const problems = problemsResponse.ok
+            ? (((await problemsResponse.json()) as ApiProblem[]).map(
+                toProblemRecord,
+              ) ?? [])
+            : [];
+
+          return {
+            id: pattern.id,
+            name: pattern.name,
+            problems,
+          };
+        }),
+      );
+
+      setPatternRecords(patternsWithProblems);
+      setActivePatternId((currentActivePatternId) => {
+        if (
+          currentActivePatternId &&
+          patternsWithProblems.some(
+            (patternRecord) => patternRecord.id === currentActivePatternId,
+          )
+        ) {
+          return currentActivePatternId;
+        }
+
+        return patternsWithProblems[0]?.id ?? "";
+      });
+    } catch {
+      // ignore network errors for now and keep current UI state
+    }
+  }
+
+  useEffect(() => {
+    void loadPatternRecords();
+  }, []);
 
   const activePatternRecord = patternRecords.find(
     (patternRecord) => patternRecord.id === activePatternId,
@@ -128,24 +193,33 @@ function App() {
       }
     : emptyProblemDraft;
 
-  function createPattern() {
+  async function createPattern() {
     const nextPatternName = pendingPatternName.trim();
     if (!nextPatternName) {
       return;
     }
 
-    const newPatternRecord: PatternRecord = {
-      id: crypto.randomUUID(),
-      name: nextPatternName,
-      problems: [],
-    };
+    try {
+      const response = await fetch(`${API_BASE_URL}/pattern/add`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: nextPatternName,
+          desc: nextPatternName,
+        }),
+      });
 
-    setPatternRecords((currentPatterns) => [
-      newPatternRecord,
-      ...currentPatterns,
-    ]);
-    setActivePatternId(newPatternRecord.id);
-    setPendingPatternName("");
+      if (!response.ok) {
+        return;
+      }
+
+      setPendingPatternName("");
+      await loadPatternRecords();
+    } catch {
+      // ignore network errors for now and keep current UI state
+    }
   }
 
   function renamePattern(patternId: string, nextPatternName: string) {
@@ -163,16 +237,23 @@ function App() {
     );
   }
 
-  function deletePattern(patternId: string) {
-    setPatternRecords((currentPatterns) => {
-      const remainingPatterns = currentPatterns.filter(
-        (patternRecord) => patternRecord.id !== patternId,
+  async function deletePattern(patternId: string) {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/pattern/delete/${patternId}`,
+        {
+          method: "DELETE",
+        },
       );
-      if (activePatternId === patternId) {
-        setActivePatternId(remainingPatterns[0]?.id ?? "");
+
+      if (!response.ok) {
+        return;
       }
-      return remainingPatterns;
-    });
+
+      await loadPatternRecords();
+    } catch {
+      // ignore network errors for now and keep current UI state
+    }
   }
 
   function openCreateProblem() {
@@ -187,8 +268,41 @@ function App() {
     setIsProblemFormOpen(true);
   }
 
-  function saveProblem(problemDraft: ProblemDraft) {
+  async function saveProblem(problemDraft: ProblemDraft) {
     if (!activePatternRecord) {
+      return;
+    }
+
+    if (problemFormMode === "create") {
+      try {
+        const response = await fetch(`${API_BASE_URL}/problem/add`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: problemDraft.name,
+            desc: problemDraft.name,
+            pattern: activePatternRecord.id,
+            is_done: false,
+            note: JSON.stringify({
+              difficulty: problemDraft.difficulty,
+              estimatedMinutes: problemDraft.estimatedMinutes,
+            }),
+          }),
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        setIsProblemFormOpen(false);
+        setActiveProblemId(null);
+        await loadPatternRecords();
+      } catch {
+        // ignore network errors for now and keep current UI state
+      }
+
       return;
     }
 
@@ -196,19 +310,6 @@ function App() {
       currentPatterns.map((patternRecord) => {
         if (patternRecord.id !== activePatternRecord.id) {
           return patternRecord;
-        }
-
-        if (problemFormMode === "create") {
-          const newProblemRecord: ProblemRecord = {
-            id: crypto.randomUUID(),
-            ...problemDraft,
-            isCompleted: false,
-          };
-
-          return {
-            ...patternRecord,
-            problems: [newProblemRecord, ...patternRecord.problems],
-          };
         }
 
         return {
@@ -229,23 +330,23 @@ function App() {
     setActiveProblemId(null);
   }
 
-  function deleteProblem(problemId: string) {
-    if (!activePatternRecord) {
-      return;
-    }
+  async function deleteProblem(problemId: string) {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/problem/delete/${problemId}`,
+        {
+          method: "DELETE",
+        },
+      );
 
-    setPatternRecords((currentPatterns) =>
-      currentPatterns.map((patternRecord) =>
-        patternRecord.id === activePatternRecord.id
-          ? {
-              ...patternRecord,
-              problems: patternRecord.problems.filter(
-                (problemRecord) => problemRecord.id !== problemId,
-              ),
-            }
-          : patternRecord,
-      ),
-    );
+      if (!response.ok) {
+        return;
+      }
+
+      await loadPatternRecords();
+    } catch {
+      // ignore network errors for now and keep current UI state
+    }
   }
 
   function openCompleteProblem(problemId: string) {
@@ -312,10 +413,10 @@ function App() {
       ) : (
         <main className="flex h-screen flex-1 items-center justify-center bg-[#000000] px-8 py-12">
           <div className="w-full max-w-xl border border-[#2A2A2A] bg-[#0A0A0A] p-8">
-            <p className="text-xs uppercase tracking-tight text-[#A3A3A3]">
+            <p className="text-xs uppercase text-[#A3A3A3]">
               Pattern Workspace
             </p>
-            <h2 className="mt-1 text-2xl font-semibold tracking-tight text-[#FFFFFF]">
+            <h2 className="mt-1 text-2xl font-semibold text-[#FFFFFF]">
               No Active Pattern
             </h2>
             <p className="mt-3 text-sm text-[#A3A3A3]">

@@ -23,15 +23,15 @@ export function ModalShell({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#000000]/80 p-4 transition-opacity duration-100">
       <div
         className={cn(
-          "w-full max-w-md border border-[#2A2A2A] bg-[#0A0A0A] p-6",
+          "w-full max-w-md border-2 border-[#2A2A2A] bg-[#0A0A0A] p-6 shadow-[4px_4px_0_0_#2A2A2A]",
           "focus-within:ring-1 focus-within:ring-[#FFFFFF] focus-within:ring-offset-1 focus-within:ring-offset-[#000000]",
         )}
       >
         <div className="mb-6 space-y-1">
-          <h2 className="text-xl font-semibold tracking-tight text-[#FFFFFF]">
+          <h2 className="font-display text-sm font-semibold uppercase text-[#FFFFFF] leading-relaxed">
             {title}
           </h2>
-          <p className="text-sm text-[#A3A3A3]">{description}</p>
+          <p className="text-xl text-[#A3A3A3]">{description}</p>
         </div>
         {children}
       </div>

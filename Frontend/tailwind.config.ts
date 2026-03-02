@@ -6,13 +6,16 @@ export default {
     extend: {
       fontFamily: {
         sans: [
-          "Inter",
-          "Geist",
-          "-apple-system",
-          "BlinkMacSystemFont",
-          "Segoe UI",
-          "sans-serif",
+          "VT323",
+          "ui-monospace",
+          "SFMono-Regular",
+          "Menlo",
+          "Monaco",
+          "Consolas",
+          "Liberation Mono",
+          "monospace",
         ],
+        display: ["Press Start 2P", "VT323", "ui-monospace", "monospace"],
       },
     },
   },

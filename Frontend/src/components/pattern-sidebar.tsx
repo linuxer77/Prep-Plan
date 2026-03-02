@@ -26,12 +26,12 @@ export function PatternSidebar({
   onDeletePattern,
 }: PatternSidebarProps) {
   return (
-    <aside className="flex h-screen w-[260px] shrink-0 flex-col border-r border-[#2A2A2A] bg-[#0A0A0A] px-4 py-8">
+    <aside className="flex h-screen w-[280px] shrink-0 flex-col border-r-2 border-[#2A2A2A] bg-[#0A0A0A] px-4 py-8">
       <header className="mb-6 px-2">
-        <p className="text-xs uppercase tracking-tight text-[#A3A3A3]">
+        <p className="font-display text-[9px] uppercase text-[#A3A3A3]">
           Patterns
         </p>
-        <h1 className="mt-1 text-xl font-semibold tracking-tight text-[#FFFFFF]">
+        <h1 className="mt-2 text-lg font-semibold uppercase text-[#FFFFFF] leading-relaxed">
           Pattern Tracker
         </h1>
       </header>
@@ -70,7 +70,7 @@ export function PatternSidebar({
               <button
                 type="button"
                 onClick={() => onActivatePattern(patternRecord.id)}
-                className={`group w-full border px-3 py-2 text-left transition-colors duration-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#FFFFFF] focus-visible:ring-offset-1 focus-visible:ring-offset-[#000000] ${
+                className={`group w-full border-2 px-3 py-2 text-left transition-colors duration-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#FFFFFF] focus-visible:ring-offset-1 focus-visible:ring-offset-[#000000] ${
                   isActivePattern
                     ? "border-[#FFFFFF] bg-[#000000]"
                     : "border-[#2A2A2A] bg-[#0A0A0A] hover:bg-[#111111]"
@@ -78,10 +78,10 @@ export function PatternSidebar({
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium tracking-tight text-[#FFFFFF]">
+                    <p className="truncate text-xl font-medium text-[#FFFFFF]">
                       {patternRecord.name}
                     </p>
-                    <p className="text-xs text-[#A3A3A3]">
+                    <p className="text-base text-[#A3A3A3]">
                       Problems • {completedMetrics}/{totalProblems}
                     </p>
                   </div>

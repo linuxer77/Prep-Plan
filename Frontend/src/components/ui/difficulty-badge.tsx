@@ -4,13 +4,13 @@ import { cn } from "../../lib/utils";
 import type { ProblemDifficulty } from "../../types/tracker";
 
 const difficultyBadgeVariants = cva(
-  "inline-flex items-center border px-2 py-1 text-[11px] uppercase tracking-tight text-[#FFFFFF]",
+  "inline-flex items-center border-2 px-2 py-1 font-display text-[9px] uppercase text-[#FFFFFF]",
   {
     variants: {
       difficulty: {
         Easy: "border-[#2A2A2A] font-normal",
         Medium: "border-[#A3A3A3] border-dashed font-medium",
-        Hard: "border-[#FFFFFF] border-2 font-semibold",
+        Hard: "border-[#FFFFFF] font-semibold",
       },
     },
   },
