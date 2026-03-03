@@ -8,9 +8,12 @@ export type SolvedStatus =
 export interface ProblemRecord {
   id: string;
   name: string;
+  url?: string;
   difficulty: ProblemDifficulty;
-  estimatedMinutes: number;
   isCompleted: boolean;
+  myApproach?: string;
+  optimalSolution?: string;
+  notes?: string;
   timeTakenMinutes?: number;
   completedAt?: string;
   solvedStatus?: SolvedStatus;
@@ -24,6 +27,6 @@ export interface PatternRecord {
 
 export interface ProblemDraft {
   name: string;
+  url: string;
   difficulty: ProblemDifficulty;
-  estimatedMinutes: number;
 }

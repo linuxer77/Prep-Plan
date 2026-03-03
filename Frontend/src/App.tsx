@@ -4,6 +4,7 @@ import { CompleteProblemDialog } from "./components/complete-problem-dialog";
 import { PatternDetail } from "./components/pattern-detail";
 import { PatternSidebar } from "./components/pattern-sidebar";
 import { ProblemFormDialog } from "./components/problem-form-dialog";
+import { ProblemWorkspace } from "./components/problem-workspace";
 import type {
   PatternRecord,
   ProblemDraft,
@@ -22,17 +23,20 @@ interface ApiPattern {
 interface ApiProblem {
   id: string;
   name: string;
-  desc: string;
   is_done: boolean;
   pattern: string;
+  approachCode?: string;
+  solcode?: string;
+  timetaken?: string | null;
+  difficulty?: string | null;
   note?: string;
   url?: string;
 }
 
 const emptyProblemDraft: ProblemDraft = {
   name: "",
+  url: "",
   difficulty: "Easy",
-  estimatedMinutes: 20,
 };
 
 function App() {
@@ -45,6 +49,7 @@ function App() {
     "create",
   );
   const [activeProblemId, setActiveProblemId] = useState<string | null>(null);
+  const [focusedProblemId, setFocusedProblemId] = useState<string | null>(null);
 
   const [isCompletePromptOpen, setIsCompletePromptOpen] = useState(false);
   const [completePromptProblemId, setCompletePromptProblemId] = useState<
@@ -53,13 +58,32 @@ function App() {
 
   function toProblemRecord(problem: ApiProblem): ProblemRecord {
     let difficulty: ProblemRecord["difficulty"] = "Easy";
-    let estimatedMinutes = 20;
+    let notes = "";
+    let myApproach = problem.approachCode ?? "";
+    let optimalSolution = problem.solcode ?? "";
+    let solvedStatus: ProblemRecord["solvedStatus"] | undefined;
+    let timeTakenMinutes: number | undefined;
+    const completedAt = problem.timetaken
+      ? new Date(problem.timetaken).toLocaleDateString()
+      : undefined;
+
+    if (
+      problem.difficulty === "Easy" ||
+      problem.difficulty === "Medium" ||
+      problem.difficulty === "Hard"
+    ) {
+      difficulty = problem.difficulty;
+    }
 
     if (problem.note) {
       try {
         const parsed = JSON.parse(problem.note) as {
           difficulty?: ProblemRecord["difficulty"];
-          estimatedMinutes?: number;
+          notes?: string;
+          myApproach?: string;
+          optimalSolution?: string;
+          solvedStatus?: ProblemRecord["solvedStatus"];
+          timeTakenMinutes?: number;
         };
 
         if (
@@ -70,11 +94,31 @@ function App() {
           difficulty = parsed.difficulty;
         }
 
+        if (typeof parsed.notes === "string") {
+          notes = parsed.notes;
+        }
+
+        if (typeof parsed.myApproach === "string") {
+          myApproach = parsed.myApproach;
+        }
+
+        if (typeof parsed.optimalSolution === "string") {
+          optimalSolution = parsed.optimalSolution;
+        }
+
         if (
-          typeof parsed.estimatedMinutes === "number" &&
-          Number.isFinite(parsed.estimatedMinutes)
+          parsed.solvedStatus === "Solved Independently" ||
+          parsed.solvedStatus === "Needed Hint" ||
+          parsed.solvedStatus === "Saw Solution"
         ) {
-          estimatedMinutes = parsed.estimatedMinutes;
+          solvedStatus = parsed.solvedStatus;
+        }
+
+        if (
+          typeof parsed.timeTakenMinutes === "number" &&
+          Number.isFinite(parsed.timeTakenMinutes)
+        ) {
+          timeTakenMinutes = parsed.timeTakenMinutes;
         }
       } catch {
         // keep defaults when metadata is missing or malformed
@@ -84,9 +128,15 @@ function App() {
     return {
       id: problem.id,
       name: problem.name,
+      url: problem.url,
       difficulty,
-      estimatedMinutes,
       isCompleted: problem.is_done,
+      notes,
+      myApproach,
+      optimalSolution,
+      solvedStatus,
+      timeTakenMinutes,
+      completedAt,
     };
   }
 
@@ -157,6 +207,18 @@ function App() {
     );
   }, [activePatternRecord, activeProblemId]);
 
+  const focusedProblemRecord = useMemo(() => {
+    if (!activePatternRecord || !focusedProblemId) {
+      return null;
+    }
+
+    return (
+      activePatternRecord.problems.find(
+        (problemRecord) => problemRecord.id === focusedProblemId,
+      ) ?? null
+    );
+  }, [activePatternRecord, focusedProblemId]);
+
   const completePromptProblem = useMemo(() => {
     if (!activePatternRecord || !completePromptProblemId) {
       return null;
@@ -185,11 +247,25 @@ function App() {
     [activePatternRecord],
   );
 
+  useEffect(() => {
+    if (!focusedProblemId || !activePatternRecord) {
+      return;
+    }
+
+    const hasFocusedProblem = activePatternRecord.problems.some(
+      (problemRecord) => problemRecord.id === focusedProblemId,
+    );
+
+    if (!hasFocusedProblem) {
+      setFocusedProblemId(null);
+    }
+  }, [activePatternRecord, focusedProblemId]);
+
   const activeProblemDraft: ProblemDraft = editableProblemRecord
     ? {
         name: editableProblemRecord.name,
+        url: editableProblemRecord.url ?? "",
         difficulty: editableProblemRecord.difficulty,
-        estimatedMinutes: editableProblemRecord.estimatedMinutes,
       }
     : emptyProblemDraft;
 
@@ -285,9 +361,10 @@ function App() {
             desc: problemDraft.name,
             pattern: activePatternRecord.id,
             is_done: false,
+            difficulty: problemDraft.difficulty,
+            url: problemDraft.url || undefined,
             note: JSON.stringify({
               difficulty: problemDraft.difficulty,
-              estimatedMinutes: problemDraft.estimatedMinutes,
             }),
           }),
         });
@@ -318,7 +395,9 @@ function App() {
             problemRecord.id === activeProblemId
               ? {
                   ...problemRecord,
-                  ...problemDraft,
+                  name: problemDraft.name,
+                  difficulty: problemDraft.difficulty,
+                  url: problemDraft.url || undefined,
                 }
               : problemRecord,
           ),
@@ -387,6 +466,33 @@ function App() {
     setCompletePromptProblemId(null);
   }
 
+  function updateProblemWorkspace(
+    problemId: string,
+    changes: Pick<ProblemRecord, "myApproach" | "optimalSolution" | "notes">,
+  ) {
+    if (!activePatternRecord) {
+      return;
+    }
+
+    setPatternRecords((currentPatterns) =>
+      currentPatterns.map((patternRecord) =>
+        patternRecord.id === activePatternRecord.id
+          ? {
+              ...patternRecord,
+              problems: patternRecord.problems.map((problemRecord) =>
+                problemRecord.id === problemId
+                  ? {
+                      ...problemRecord,
+                      ...changes,
+                    }
+                  : problemRecord,
+              ),
+            }
+          : patternRecord,
+      ),
+    );
+  }
+
   return (
     <div className="flex h-screen bg-[#000000] text-[#FFFFFF]">
       <PatternSidebar
@@ -395,21 +501,37 @@ function App() {
         pendingPatternName={pendingPatternName}
         setPendingPatternName={setPendingPatternName}
         onCreatePattern={createPattern}
-        onActivatePattern={setActivePatternId}
+        onActivatePattern={(nextPatternId) => {
+          setFocusedProblemId(null);
+          setActivePatternId(nextPatternId);
+        }}
         onRenamePattern={renamePattern}
         onDeletePattern={deletePattern}
       />
 
       {activePatternRecord ? (
-        <PatternDetail
-          activePatternRecord={activePatternRecord}
-          pendingProblems={pendingProblems}
-          completedProblems={completedProblems}
-          onOpenCreateProblem={openCreateProblem}
-          onOpenEditProblem={openEditProblem}
-          onDeleteProblem={deleteProblem}
-          onOpenCompleteProblem={openCompleteProblem}
-        />
+        focusedProblemRecord ? (
+          <ProblemWorkspace
+            patternName={activePatternRecord.name}
+            problem={focusedProblemRecord}
+            onBack={() => setFocusedProblemId(null)}
+            onUpdateProblemWorkspace={updateProblemWorkspace}
+            onOpenEditProblem={openEditProblem}
+            onDeleteProblem={deleteProblem}
+            onOpenCompleteProblem={openCompleteProblem}
+          />
+        ) : (
+          <PatternDetail
+            activePatternRecord={activePatternRecord}
+            pendingProblems={pendingProblems}
+            completedProblems={completedProblems}
+            onOpenProblemWorkspace={setFocusedProblemId}
+            onOpenCreateProblem={openCreateProblem}
+            onOpenEditProblem={openEditProblem}
+            onDeleteProblem={deleteProblem}
+            onOpenCompleteProblem={openCompleteProblem}
+          />
+        )
       ) : (
         <main className="flex h-screen flex-1 items-center justify-center bg-[#000000] px-8 py-12">
           <div className="w-full max-w-xl border border-[#2A2A2A] bg-[#0A0A0A] p-8">
@@ -441,7 +563,6 @@ function App() {
       <CompleteProblemDialog
         isOpen={isCompletePromptOpen}
         problemName={completePromptProblem?.name ?? ""}
-        estimatedMinutes={completePromptProblem?.estimatedMinutes ?? 20}
         onClose={() => {
           setIsCompletePromptOpen(false);
           setCompletePromptProblemId(null);

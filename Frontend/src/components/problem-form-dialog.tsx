@@ -60,7 +60,23 @@ export function ProblemFormDialog({
           />
         </label>
 
-        <div className="grid grid-cols-2 gap-4">
+        <label className="block space-y-2">
+          <span className="font-display text-[9px] uppercase text-[#A3A3A3]">
+            Problem URL (optional)
+          </span>
+          <Input
+            value={problemDraft.url}
+            onChange={(event) =>
+              setProblemDraft((currentDraft) => ({
+                ...currentDraft,
+                url: event.target.value,
+              }))
+            }
+            placeholder="https://..."
+          />
+        </label>
+
+        <div className="grid grid-cols-1 gap-4">
           <label className="block space-y-2">
             <span className="font-display text-[9px] uppercase text-[#A3A3A3]">
               Difficulty
@@ -81,24 +97,6 @@ export function ProblemFormDialog({
                 </option>
               ))}
             </select>
-          </label>
-
-          <label className="block space-y-2">
-            <span className="font-display text-[9px] uppercase text-[#A3A3A3]">
-              Estimated Time (min)
-            </span>
-            <Input
-              type="number"
-              min={5}
-              value={problemDraft.estimatedMinutes}
-              onChange={(event) =>
-                setProblemDraft((currentDraft) => ({
-                  ...currentDraft,
-                  estimatedMinutes: Number(event.target.value),
-                }))
-              }
-              required
-            />
           </label>
         </div>
 

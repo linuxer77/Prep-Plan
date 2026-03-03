@@ -14,7 +14,6 @@ const solvedStatusOptions: SolvedStatus[] = [
 interface CompleteProblemDialogProps {
   isOpen: boolean;
   problemName: string;
-  estimatedMinutes: number;
   onClose: () => void;
   onConfirm: (solvedStatus: SolvedStatus, timeTakenMinutes: number) => void;
 }
@@ -22,21 +21,19 @@ interface CompleteProblemDialogProps {
 export function CompleteProblemDialog({
   isOpen,
   problemName,
-  estimatedMinutes,
   onClose,
   onConfirm,
 }: CompleteProblemDialogProps) {
   const [selectedSolvedStatus, setSelectedSolvedStatus] =
     useState<SolvedStatus>("Solved Independently");
-  const [timeTakenMinutes, setTimeTakenMinutes] =
-    useState<number>(estimatedMinutes);
+  const [timeTakenMinutes, setTimeTakenMinutes] = useState<number>(1);
 
   useEffect(() => {
     if (isOpen) {
       setSelectedSolvedStatus("Solved Independently");
-      setTimeTakenMinutes(estimatedMinutes);
+      setTimeTakenMinutes(1);
     }
-  }, [estimatedMinutes, isOpen]);
+  }, [isOpen]);
 
   return (
     <ModalShell

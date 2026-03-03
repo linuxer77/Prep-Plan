@@ -34,6 +34,21 @@ def deletePattern(request, id):
         return Response(status=status.HTTP_200_OK)
 
 
+@api_view(["PUT"])
+def updatePattern(request, id):
+    try:
+        pattern = Pattern.objects.get(id=id)
+    except Pattern.DoesNotExist:
+        return Response({"detail": "Pattern not found."})
+    else:
+        serializer = PatternSerializer(pattern, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 @api_view(["POST"])
 def addProblem(request):
     serializer = ProblemSerializer(data=request.data)
@@ -59,3 +74,18 @@ def deleteProblem(request, id):
     else:
         problem.delete()
         return Response(status=status.HTTP_200_OK)
+
+
+@api_view(["PUT"])
+def updateProblem(request, id):
+    try:
+        Problem = Problem.objects.get(id=id)
+    except Problem.DoesNotExist:
+        return Response({"detail": "Pattern not found."})
+    else:
+        serializer = ProblemSerializer(Problem, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)

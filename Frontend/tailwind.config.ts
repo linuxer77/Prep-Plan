@@ -6,16 +6,19 @@ export default {
     extend: {
       fontFamily: {
         sans: [
-          "VT323",
-          "ui-monospace",
-          "SFMono-Regular",
-          "Menlo",
-          "Monaco",
-          "Consolas",
-          "Liberation Mono",
-          "monospace",
+          "Bahnschrift",
+          "DIN Alternate",
+          "Arial Narrow",
+          "Segoe UI",
+          "sans-serif",
         ],
-        display: ["Press Start 2P", "VT323", "ui-monospace", "monospace"],
+        display: [
+          "Bahnschrift",
+          "DIN Alternate",
+          "Arial Narrow",
+          "Segoe UI",
+          "sans-serif",
+        ],
       },
     },
   },
